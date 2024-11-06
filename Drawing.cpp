@@ -1,6 +1,6 @@
 #include <SFML/Graphics.hpp>
+#include <iostream>
 #include <vector>
-#include <cmath>
 
 #define WINDOW_WIDTH 800
 #define WINDOW_HEIGHT 600
@@ -11,7 +11,7 @@ public:
     sf::Color color = sf::Color::Black;
 };
 
-void Render(sf::RenderWindow& window, std::vector<sf::Sprite> boxes, std::vector<Pixel*> pixels, sf::Sprite eraser, sf::CircleShape cursor) {
+void Render(sf::RenderWindow& window, std::vector<sf::Sprite> boxes, std::vector<Pixel*> pixels, sf::Sprite eraser, sf::CircleShape cursor, sf::Text eraserText) {
     window.clear(sf::Color::White);
 
     for (auto& box : boxes) {
@@ -23,21 +23,30 @@ void Render(sf::RenderWindow& window, std::vector<sf::Sprite> boxes, std::vector
     }
 
     window.draw(eraser);
+    window.draw(eraserText);
     window.draw(cursor);
     window.display();
 }
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "InkOcean");
-    sf::Vector2i mousePosition = {};
 
     Pixel pixel;
-    pixel.shape.setFillColor(pixel.color);
     pixel.shape.setRadius(20.f);
     std::vector<Pixel*> pixels;
 
     sf::Texture eraserTexture;
     sf::Sprite eraser;
+
+    sf::Font font;
+    sf::Text eraserText;
+
+    font.loadFromFile("Fonts\\Minecraft.ttf");
+
+    eraserText.setFont(font);
+    eraserText.setFillColor(sf::Color::Black);
+    eraserText.setString("OFF");
+    eraserText.setCharacterSize(12);
 
     bool eraserSelected = false;
 
@@ -45,138 +54,99 @@ int main() {
     eraser.setTexture(eraserTexture);
     eraser.setScale(4, 4);
     eraser.setPosition(WINDOW_WIDTH - eraserTexture.getSize().x * eraser.getScale().x, WINDOW_HEIGHT / 2);
+    eraserText.setPosition(eraser.getPosition().x, eraser.getPosition().y - 14);
 
-    sf::Texture redBoxUnselectedTexture, blueBoxUnselectedTexture, greenBoxUnselectedTexture, blackBoxUnselectedTexture;
-    sf::Texture redBoxSelectedTexture, blueBoxSelectedTexture, greenBoxSelectedTexture, blackBoxSelectedTexture;
-
-    redBoxUnselectedTexture.loadFromFile("Textures\\RedBoxUnselected.png");
-    blueBoxUnselectedTexture.loadFromFile("Textures\\BlueBoxUnselected.png");
-    greenBoxUnselectedTexture.loadFromFile("Textures\\GreenBoxUnselected.png");
-    blackBoxUnselectedTexture.loadFromFile("Textures\\BlackBoxUnselected.png");
-
-    redBoxSelectedTexture.loadFromFile("Textures\\RedBoxSelected.png");
-    blueBoxSelectedTexture.loadFromFile("Textures\\BlueBoxSelected.png");
-    greenBoxSelectedTexture.loadFromFile("Textures\\GreenBoxSelected.png");
-    blackBoxSelectedTexture.loadFromFile("Textures\\BlackBoxSelected.png");
-
+    sf::Texture redBoxTexture, blueBoxTexture, greenBoxTexture, blackBoxTexture;
     sf::Sprite redBox, blueBox, greenBox, blackBox;
 
-    redBox.setTexture(redBoxUnselectedTexture);
+    redBoxTexture.loadFromFile("Textures\\RedBoxUnselected.png");
+    blueBoxTexture.loadFromFile("Textures\\BlueBoxUnselected.png");
+    greenBoxTexture.loadFromFile("Textures\\GreenBoxUnselected.png");
+    blackBoxTexture.loadFromFile("Textures\\BlackBoxUnselected.png");
+
+    redBox.setTexture(redBoxTexture);
     redBox.setScale(4, 4);
-    blueBox.setTexture(blueBoxUnselectedTexture);
+    blueBox.setTexture(blueBoxTexture);
     blueBox.setScale(4, 4);
-    greenBox.setTexture(greenBoxUnselectedTexture);
+    greenBox.setTexture(greenBoxTexture);
     greenBox.setScale(4, 4);
-    blackBox.setTexture(blackBoxUnselectedTexture);
+    blackBox.setTexture(blackBoxTexture);
     blackBox.setScale(4, 4);
 
-    float textureSize = redBoxUnselectedTexture.getSize().x * redBox.getScale().y;
+    float textureSize = redBoxTexture.getSize().x * redBox.getScale().y;
     blackBox.setPosition(WINDOW_WIDTH / 2 - textureSize * 2, WINDOW_HEIGHT - textureSize);
     redBox.setPosition(WINDOW_WIDTH / 2 - textureSize, WINDOW_HEIGHT - textureSize);
     blueBox.setPosition(WINDOW_WIDTH / 2, WINDOW_HEIGHT - textureSize);
     greenBox.setPosition(WINDOW_WIDTH / 2 + textureSize, WINDOW_HEIGHT - textureSize);
 
     bool redSelected = false, blueSelected = false, greenSelected = false, blackSelected = true;
-    bool colorSelection = false;
+    pixel.color = sf::Color::Black; // Default color
 
+    // Cursor for showing where the user draws
     sf::CircleShape cursor;
     cursor.setRadius(20.0f);
     cursor.setFillColor(sf::Color(100.f, 0, 0, 100));
 
-    std::vector<sf::Sprite> boxes;
-    boxes.push_back(redBox);
-    boxes.push_back(blackBox);
-    boxes.push_back(greenBox);
-    boxes.push_back(blueBox);
+    // Boxes for Colors
+    std::vector<sf::Sprite> boxes = { redBox, blackBox, greenBox, blueBox };
 
-    //Game loop
+    // Game loop
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
+
+                // Eraser toggle
+                if (eraser.getGlobalBounds().contains(mousePos)) {
+                    eraserSelected = !eraserSelected;
+                    eraserText.setString(eraserSelected ? "ON" : "OFF");
+                }
+                else {
+                    // Color selection
+                    if (redBox.getGlobalBounds().contains(mousePos)) {
+                        pixel.color = sf::Color::Red;
+                        redSelected = true; blueSelected = greenSelected = blackSelected = false;
+                    }
+                    else if (blueBox.getGlobalBounds().contains(mousePos)) {
+                        pixel.color = sf::Color::Blue;
+                        blueSelected = true; redSelected = greenSelected = blackSelected = false;
+                    }
+                    else if (greenBox.getGlobalBounds().contains(mousePos)) {
+                        pixel.color = sf::Color::Green;
+                        greenSelected = true; redSelected = blueSelected = blackSelected = false;
+                    }
+                    else if (blackBox.getGlobalBounds().contains(mousePos)) {
+                        pixel.color = sf::Color::Black;
+                        blackSelected = true; redSelected = blueSelected = greenSelected = false;
+                    }
+                }
+            }
         }
 
-        //Pointer Config
+        // Pointer config
         sf::Vector2i mousePosition = sf::Mouse::getPosition(window);
         sf::Vector2f mousePos(static_cast<float>(mousePosition.x), static_cast<float>(mousePosition.y));
         cursor.setPosition(mousePos - sf::Vector2f(20.f, 20.f));
-        colorSelection = false;
 
-        //Inputs
+        // Drawing or Erasing pixels
         if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-
-            // Color selection
-            if (redBox.getGlobalBounds().contains(mousePos)) {
-                redSelected = true;
-                blueSelected = greenSelected = blackSelected = eraserSelected = false;
-
-                redBox.setTexture(redBoxSelectedTexture);
-                blueBox.setTexture(blueBoxUnselectedTexture);
-                greenBox.setTexture(greenBoxUnselectedTexture);
-                blackBox.setTexture(blackBoxUnselectedTexture);
-
-                pixel.color = sf::Color::Red;
+            if (!eraserSelected) {
                 pixel.shape.setFillColor(pixel.color);
-                colorSelection = true;
+                pixel.shape.setPosition(mousePos - sf::Vector2f(20.f, 20.f));
+                Pixel* newPixel = new Pixel;
+                newPixel->color = pixel.color;
+                newPixel->shape = pixel.shape;
+                pixels.push_back(newPixel);
             }
-            if (blueBox.getGlobalBounds().contains(mousePos)) {
-                blueSelected = true;
-                redSelected = greenSelected = blackSelected = eraserSelected = false;
-
-                redBox.setTexture(redBoxUnselectedTexture);
-                blueBox.setTexture(blueBoxSelectedTexture);
-                greenBox.setTexture(greenBoxUnselectedTexture);
-                blackBox.setTexture(blackBoxUnselectedTexture);
-
-                pixel.color = sf::Color::Blue;
-                pixel.shape.setFillColor(pixel.color);
-                colorSelection = true;
-            }
-            if (greenBox.getGlobalBounds().contains(mousePos)) {
-                greenSelected = true;
-                redSelected = blueSelected = blackSelected = eraserSelected = false;
-
-                redBox.setTexture(redBoxUnselectedTexture);
-                blueBox.setTexture(blueBoxUnselectedTexture);
-                greenBox.setTexture(greenBoxSelectedTexture);
-                blackBox.setTexture(blackBoxUnselectedTexture);
-
-                pixel.color = sf::Color::Green;
-                pixel.shape.setFillColor(pixel.color);
-                colorSelection = true;
-            }
-            if (blackBox.getGlobalBounds().contains(mousePos)) {
-                blackSelected = true;
-                redSelected = blueSelected = greenSelected = eraserSelected = false;
-
-                redBox.setTexture(redBoxUnselectedTexture);
-                blueBox.setTexture(blueBoxUnselectedTexture);
-                greenBox.setTexture(greenBoxUnselectedTexture);
-                blackBox.setTexture(blackBoxSelectedTexture);
-
-                pixel.color = sf::Color::Black;
-                pixel.shape.setFillColor(pixel.color);
-                colorSelection = true;
-            }
-
-            if (eraser.getGlobalBounds().contains(mousePos)) {
-                eraserSelected = !eraserSelected;
-            }
-        }
-
-        if (!colorSelection && sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-            pixel.shape.setPosition(mousePos - sf::Vector2f(20.f, 20.f));
-            Pixel* newPixel = new Pixel;
-            newPixel->color = pixel.color;
-            newPixel->shape = pixel.shape;
-            pixels.push_back(newPixel);
-        }
-
-        if (!colorSelection && sf::Mouse::isButtonPressed(sf::Mouse::Left) && eraserSelected) {
-            for (size_t i = 0; i < pixels.size(); i++) {
-                if (pixels[i]->shape.getGlobalBounds().contains(mousePos)) {
-                    delete pixels[i];
-                    pixels.erase(pixels.begin() + i);
+            else {
+                for (size_t i = 0; i < pixels.size(); i++) {
+                    if (pixels[i]->shape.getGlobalBounds().contains(mousePos)) {
+                        delete pixels[i];
+                        pixels.erase(pixels.begin() + i);
+                        break;
+                    }
                 }
             }
         }
@@ -186,7 +156,7 @@ int main() {
             pixels.pop_back();
         }
 
-        Render(window, boxes, pixels, eraser, cursor);
+        Render(window, boxes, pixels, eraser, cursor, eraserText);
     }
 
     for (auto& pixel : pixels) {
