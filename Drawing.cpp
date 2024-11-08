@@ -32,7 +32,6 @@ void DeletePixels(Pixel& pixel, std::vector<Pixel*>& pixels, sf::CircleShape cur
         if (distance <= cursorRadius) {
             delete pixels[i];
             pixels.erase(pixels.begin() + i);
-            break;
         }
     }
 }
@@ -40,12 +39,12 @@ void DeletePixels(Pixel& pixel, std::vector<Pixel*>& pixels, sf::CircleShape cur
 void Render(sf::RenderWindow& window, std::vector<sf::Sprite> boxes, std::vector<Pixel*> pixels, sf::Sprite eraser, sf::CircleShape cursor, sf::Text eraserText, sf::Sprite arrowUp, sf::Sprite arrowDown) {
     window.clear(sf::Color::White);
 
-    for (auto& box : boxes) {
-        window.draw(box);
-    }
-
     for (auto& pixel : pixels) {
         window.draw(pixel->shape);
+    }
+
+    for (auto& box : boxes) {
+        window.draw(box);
     }
 
     window.draw(eraser);
@@ -136,6 +135,8 @@ int main() {
 
     arrowUp.setPosition(0, WINDOW_HEIGHT / 2);
     arrowDown.setPosition(0, arrowUp.getPosition().y + arrowUpTexture.getSize().y * arrowUp.getScale().y);
+
+    window.setMouseCursorVisible(false);
 
     // Game loop
     while (window.isOpen()) {
