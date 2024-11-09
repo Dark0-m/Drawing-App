@@ -36,7 +36,7 @@ void DeletePixels(Pixel& pixel, std::vector<Pixel*>& pixels, sf::CircleShape cur
     }
 }
 
-void Render(sf::RenderWindow& window, std::vector<sf::Sprite> boxes, std::vector<Pixel*> pixels, sf::Sprite eraser, sf::CircleShape cursor, sf::Text eraserText, sf::Sprite arrowUp, sf::Sprite arrowDown) {
+void Render(sf::RenderWindow& window, std::vector<sf::Sprite> boxes, std::vector<Pixel*> pixels, sf::Sprite eraser, sf::CircleShape cursor, sf::Text eraserText, sf::Sprite arrowUp, sf::Sprite arrowDown, sf::Sprite clear) {
     window.clear(sf::Color::White);
 
     for (auto& pixel : pixels) {
@@ -51,6 +51,7 @@ void Render(sf::RenderWindow& window, std::vector<sf::Sprite> boxes, std::vector
     window.draw(eraserText);
     window.draw(arrowUp);
     window.draw(arrowDown);
+    window.draw(clear);
     window.draw(cursor);
     window.display();
 }
@@ -67,6 +68,14 @@ int main() {
 
     sf::Font font;
     sf::Text eraserText;
+
+    sf::Texture clearTexture;
+    sf::Sprite clear;
+
+    clearTexture.loadFromFile("Textures\\clear.png");
+    clear.setTexture(clearTexture);
+    clear.setScale(4, 4);
+    clear.setPosition(WINDOW_WIDTH / 2, 0);
 
     font.loadFromFile("Fonts\\Minecraft.ttf");
 
@@ -138,7 +147,7 @@ int main() {
 
     window.setMouseCursorVisible(false);
 
-    // Game loop
+    // Inside the main game loop, add this code block to handle clearing the pixels
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -150,6 +159,11 @@ int main() {
                 if (eraser.getGlobalBounds().contains(mousePos)) {
                     eraserSelected = !eraserSelected;
                     eraserText.setString(eraserSelected ? "ON" : "OFF");
+                }
+                else if (clear.getGlobalBounds().contains(mousePos)) {
+                    for (auto& p : pixels)
+                        delete p;
+                    pixels.clear();
                 }
                 else {
                     // Color selection
@@ -203,8 +217,9 @@ int main() {
             }
         }
 
-        Render(window, boxes, pixels, eraser, cursor, eraserText, arrowUp, arrowDown);
+        Render(window, boxes, pixels, eraser, cursor, eraserText, arrowUp, arrowDown, clear);
     }
+
 
     //Delete Pixels and clear
     for (auto& pixel : pixels) {
